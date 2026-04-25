@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>给你的一段话 ❤️</title>
+
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    color: white;
+    font-family: "Helvetica Neue", sans-serif;
+    text-align: center;
+    overflow: hidden;
+}
+
+.container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+}
+
+.fade-in {
+    animation: fadeIn 2s ease-in forwards;
+}
+
+@keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+
+#text {
+    font-size: 22px;
+    margin-bottom: 20px;
+    min-height: 60px;
+}
+
+img {
+    width: 80%;
+    border-radius: 15px;
+    margin-top: 15px;
+    display: none;
+}
+
+button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 20px;
+    background: #ff4d6d;
+    color: white;
+    font-size: 16px;
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container fade-in">
+    <div id="text"></div>
+    <!-- <img id="photo" src="img/photo.jpg"> -->
+    <br>
+    <button id="videoBtn">点我看一段小视频 🎬</button>
+</div>
+
+<audio id="audio" src="audio/sing01.mp3"></audio>
+
+<script>
+const message = "遇见你之后，我才知道什么是心动 ❤️";
+
+let index = 0;
+const speed = 80;
+const textEl = document.getElementById("text");
+const audio = document.getElementById("audio");
+
+function typeWriter() {
+    if (index < message.length) {
+        textEl.innerHTML += message.charAt(index) === "\n" ? "<br>" : message.charAt(index);
+        index++;
+        setTimeout(typeWriter, speed);
+    } else {
+        // 显示图片和按钮
+        // document.getElementById("photo").style.display = "block";
+        document.getElementById("videoBtn").style.display = "inline-block";
+    }
+}
+
+// 自动播放音频（需要用户点击触发）
+document.body.addEventListener("click", () => {
+    audio.play().catch(() => {});
+}, { once: true });
+
+typeWriter();
+
+// 播放视频
+document.getElementById("videoBtn").onclick = () => {
+    // window.location.href = "video/panda.mp4";
+};
+</script>
+
+</body>
+</html>
