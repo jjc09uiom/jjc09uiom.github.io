@@ -15,7 +15,6 @@ body {
     text-align: center;
     overflow: hidden;
 }
-
 .container {
     position: absolute;
     top: 50%;
@@ -23,29 +22,24 @@ body {
     transform: translate(-50%, -50%);
     width: 90%;
 }
-
 .fade-in {
     animation: fadeIn 2s ease-in forwards;
 }
-
 @keyframes fadeIn {
     from {opacity: 0;}
     to {opacity: 1;}
 }
-
 #text {
     font-size: 22px;
     margin-bottom: 20px;
     min-height: 60px;
 }
-
 img {
     width: 80%;
     border-radius: 15px;
     margin-top: 15px;
     display: none;
 }
-
 button {
     margin-top: 20px;
     padding: 10px 20px;
@@ -56,20 +50,100 @@ button {
     font-size: 16px;
     display: none;
 }
+.modal {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: linear-gradient(135deg, #ff6b9d, #c44569);
+    padding: 40px;
+    border-radius: 25px;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(255,107,157,0.4);
+}
+.heart-icon {
+    font-size: 60px;
+    margin-bottom: 20px;
+    animation: pulse 1s infinite;
+}
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+.modal-content h2 {
+    margin: 0 0 20px 0;
+    color: white;
+    font-size: 20px;
+}
+.modal-content input {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 15px;
+    font-size: 16px;
+    text-align: center;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+}
+.modal-content button {
+    display: inline-block;
+    padding: 12px 30px;
+    background: white;
+    color: #c44569;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+}
+.modal-content button:hover {
+    background: #ffe6eb;
+}
+.error-msg {
+    color: #ffeb3b;
+    font-size: 14px;
+    display: none;
+    margin-bottom: 10px;
+}
+.hint {
+    margin-top: 15px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+}
 </style>
 </head>
-
 <body>
-
 <div class="container fade-in">
     <div id="text"></div>
     <!-- <img id="photo" src="img/photo.jpg"> -->
     <br>
     <button id="videoBtn">点我看一段小视频 🎬</button>
 </div>
-
+<!-- 验证窗口 -->
+<div id="verifyModal" class="modal">
+    <div class="modal-content">
+        <div class="heart-icon">❤️</div>
+        <h2>请输入爱情密码</h2>
+        <input type="password" id="passwordInput" placeholder="在这里输入...">
+        <div id="errorMsg" class="error-msg">💔 密码错误哦，再想想～</div>
+        <button id="submitBtn">确认 💕</button>
+        <div class="hint">提示：这是一句甜甜的话 💬</div>
+    </div>
+</div>
+<div class="container">
+</div>
 <audio id="audio" src="audio/sing01.mp3"></audio>
-
 <script>
 const message = "遇见你之后，我才知道什么是心动 ❤️";
 
@@ -77,7 +151,6 @@ let index = 0;
 const speed = 80;
 const textEl = document.getElementById("text");
 const audio = document.getElementById("audio");
-
 function typeWriter() {
     if (index < message.length) {
         textEl.innerHTML += message.charAt(index) === "\n" ? "<br>" : message.charAt(index);
@@ -94,14 +167,31 @@ function typeWriter() {
 document.body.addEventListener("click", () => {
     audio.play().catch(() => {});
 }, { once: true });
-
 typeWriter();
 
 // 播放视频
 document.getElementById("videoBtn").onclick = () => {
     // window.location.href = "video/panda.mp4";
 };
-</script>
 
+// 正确密码
+const correctPassword = "我爱你么么哒特";
+
+document.getElementById("submitBtn").onclick = () => {
+    const input = document.getElementById("passwordInput").value;
+    if (input === correctPassword) {
+        alert("验证通过！");
+        document.getElementById("verifyModal").style.display = "none";
+    } else {
+        document.getElementById("errorMsg").style.display = "block";
+    }
+};
+
+document.getElementById("passwordInput").onkeypress = (e) => {
+    if (e.key === "Enter") {
+        document.getElementById("submitBtn").click();
+    }
+};
+</script>
 </body>
 </html>
