@@ -49,6 +49,10 @@ button {
     color: white;
     font-size: 16px;
     display: none;
+    transition: transform 0.2s ease;
+}
+button:active {
+    transform: scale(0.95);
 }
 .modal {
     display: flex;
@@ -106,9 +110,13 @@ button {
     font-weight: bold;
     cursor: pointer;
     margin-top: 10px;
+    transition: transform 0.2s ease;
 }
 .modal-content button:hover {
     background: #ffe6eb;
+}
+.modal-content button:active {
+    transform: scale(0.95);
 }
 .error-msg {
     color: #ffeb3b;
@@ -126,12 +134,12 @@ canvas {
     top: 0;
     left: 0;
     pointer-events: none;
-    z-index: 999;
+    z-index: 1001;
 }
 </style>
 </head>
 <body>
-<div class="container fade-in">
+<div class="container" style="opacity: 0;">
     <div id="text"></div>
     <!-- <img id="photo" src="img/photo.jpg"> -->
     <br>
@@ -267,6 +275,10 @@ document.getElementById("submitBtn").onclick = () => {
     if (input === correctPassword) {
         alert("验证通过！");
         document.getElementById("verifyModal").style.display = "none";
+        // 渐显主页面内容
+        const container = document.querySelector('.container');
+        container.style.transition = 'opacity 1s ease-in';
+        container.style.opacity = '1';
     } else {
         document.getElementById("errorMsg").style.display = "block";
     }
