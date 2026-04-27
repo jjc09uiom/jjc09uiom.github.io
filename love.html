@@ -136,6 +136,18 @@ canvas {
     pointer-events: none;
     z-index: 1001;
 }
+.audio-control {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    font-size: 30px;
+    cursor: pointer;
+    z-index: 1000;
+    transition: transform 0.2s ease;
+}
+.audio-control:active {
+    transform: scale(0.9);
+}
 </style>
 </head>
 <body>
@@ -159,6 +171,7 @@ canvas {
 <div class="container">
 </div>
 <audio id="audio" src="audio/sing01.mp3"></audio>
+<div id="audioControl" class="audio-control">🔊</div>
 <canvas id="heartCanvas"></canvas>
 <script>
 const message = "遇见你之后，我才知道什么是心动 ❤️";
@@ -183,6 +196,26 @@ function typeWriter() {
 document.body.addEventListener("click", () => {
     audio.play().catch(() => {});
 }, { once: true });
+
+// 音频控制
+const audioControl = document.getElementById('audioControl');
+audioControl.addEventListener('click', () => {
+    if (audio.paused) {
+        audio.play().catch(() => {});
+        audioControl.textContent = '🔊';
+    } else {
+        audio.pause();
+        audioControl.textContent = '🔇';
+    }
+});
+
+// 监听音频状态变化
+audio.addEventListener('play', () => {
+    audioControl.textContent = '🔊';
+});
+audio.addEventListener('pause', () => {
+    audioControl.textContent = '🔇';
+});
 typeWriter();
 
 // ❤️ 爱心粒子效果
