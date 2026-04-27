@@ -148,6 +148,22 @@ canvas {
 .audio-control:active {
     transform: scale(0.9);
 }
+#playBtn {
+    display: none;
+    padding: 12px 25px;
+    background: #ff4d6d;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: transform 0.2s ease;
+}
+#playBtn:active {
+    transform: scale(0.95);
+}
 </style>
 </head>
 <body>
@@ -156,6 +172,7 @@ canvas {
     <!-- <img id="photo" src="img/photo.jpg"> -->
     <br>
     <button id="audioBtn">点我进入音频播放器 🎬</button>
+    <button id="playBtn">🎵 播放音乐</button>
 </div>
 <!-- 验证窗口 -->
 <div id="verifyModal" class="modal">
@@ -170,8 +187,8 @@ canvas {
 </div>
 <div class="container">
 </div>
-<audio id="audio" src="audio/sing01.mp3"></audio>
-<div id="audioControl" class="audio-control">🔊</div>
+<audio id="audio" src="audio/kiss.mp3"></audio>
+<div id="audioControl" class="audio-control" style="display: none;">🔊</div>
 <canvas id="heartCanvas"></canvas>
 <script>
 const message = "遇见你之后，我才知道什么是心动 ❤️";
@@ -192,24 +209,29 @@ function typeWriter() {
     }
 }
 
-// 音频控制
+// 音频控制 - 控制静音
 const audioControl = document.getElementById('audioControl');
+let isMuted = false;
+
 audioControl.addEventListener('click', () => {
-    if (audio.paused) {
-        audio.play().catch(() => {});
-        audioControl.textContent = '🔊';
-    } else {
-        audio.pause();
-        audioControl.textContent = '🔇';
-    }
+    isMuted = !isMuted;
+    audio.muted = isMuted;
+    audioControl.textContent = isMuted ? '🔇' : '🔊';
 });
 
-// 监听音频状态变化
-audio.addEventListener('play', () => {
-    audioControl.textContent = '🔊';
-});
-audio.addEventListener('pause', () => {
-    audioControl.textContent = '🔇';
+// 播放按钮 - 从头开始播放
+const playBtn = document.getElementById('playBtn');
+let currentAudio = null;
+
+playBtn.addEventListener('click', () => {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+    }
+    currentAudio = new Audio('audio/kiss.mp3');
+    currentAudio.play().catch(() => {
+        alert('无法播放音频，请检查文件是否存在。');
+    });
 });
 typeWriter();
 
@@ -308,6 +330,9 @@ document.getElementById("submitBtn").onclick = () => {
         const container = document.querySelector('.container');
         container.style.transition = 'opacity 1s ease-in';
         container.style.opacity = '1';
+        // 显示音频控制按钮和播放按钮
+        document.getElementById('audioControl').style.display = 'block';
+        document.getElementById('playBtn').style.display = 'inline-block';
     } else {
         document.getElementById("errorMsg").style.display = "block";
     }
