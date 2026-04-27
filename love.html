@@ -291,6 +291,7 @@ window.addEventListener('touchmove', spawnHearts);
 
 // 进入音频播放器
 document.getElementById("audioBtn").onclick = () => {
+    sessionStorage.setItem('fromLovePage', 'true');
     window.location.href = "audio-player.html";
 };
 
