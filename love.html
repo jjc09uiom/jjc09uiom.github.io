@@ -248,7 +248,7 @@ playBtn.addEventListener('click', () => {
         currentAudio.currentTime = 0;
     }
     currentAudio = new Audio('audio/kiss.mp3');
-    if (!audio.muted) {
+    if (!isMuted) {
         currentAudio.play().catch(() => {
             alert('无法播放音频，请检查文件是否存在。');
         });
