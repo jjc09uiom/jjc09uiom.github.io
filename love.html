@@ -137,14 +137,10 @@ canvas {
     z-index: 1001;
 }
 .audio-control {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
     font-size: 30px;
     cursor: pointer;
-    z-index: 1000;
     transition: transform 0.2s ease, opacity 0.2s ease;
-    display: none;
+    display: block;
 }
 .audio-control.muted {
     opacity: 1;
@@ -156,17 +152,13 @@ canvas {
     transform: scale(0.9);
 }
 .play-btn-fixed {
-    position: fixed;
-    bottom: 30px;
-    right: 80px;
     font-size: 30px;
     cursor: pointer;
-    z-index: 1000;
     transition: transform 0.2s ease, opacity 0.2s ease;
-    display: none;
     background: none;
     border: none;
     padding: 0;
+    display: block;
 }
 .play-btn-fixed:active {
     transform: scale(0.95);
@@ -177,6 +169,28 @@ canvas {
 }
 .play-btn-fixed.playing {
     animation: soundWave 0.8s ease-in-out infinite;
+}
+.audio-btn-group {
+    position: fixed;
+    bottom: 20px;
+    right: 30px;
+    display: none;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 40px;
+    z-index: 1000;
+}
+.audio-btn-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 50px;
+}
+.audio-btn-item span {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    text-align: center;
 }
 </style>
 </head>
@@ -201,8 +215,16 @@ canvas {
 <div class="container">
 </div>
 <audio id="audio" src="audio/kiss.mp3"></audio>
-<div id="audioControl" class="audio-control muted">🔇</div>
-<button id="playBtn" class="play-btn-fixed">🔊</button>
+<div class="audio-btn-group" id="audioBtnGroup">
+    <div class="audio-btn-item">
+        <button id="playBtn" class="play-btn-fixed">🔊</button>
+        <span>播放</span>
+    </div>
+    <div class="audio-btn-item">
+        <div id="audioControl" class="audio-control muted">🔇</div>
+        <span>静音</span>
+    </div>
+</div>
 <canvas id="heartCanvas"></canvas>
 <script>
 const message = "遇见你之后，我才知道什么是心动 ❤️";
@@ -357,8 +379,7 @@ document.getElementById("submitBtn").onclick = () => {
         container.style.transition = 'opacity 1s ease-in';
         container.style.opacity = '1';
         // 显示音频控制按钮和播放按钮
-        document.getElementById('audioControl').style.display = 'block';
-        document.getElementById('playBtn').style.display = 'block';
+        document.getElementById('audioBtnGroup').style.display = 'flex';
     } else {
         document.getElementById("errorMsg").style.display = "block";
     }
