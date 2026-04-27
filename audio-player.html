@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>音频播放器 ❤️</title>
+
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: black;
+    color: white;
+    font-family: "Helvetica Neue", sans-serif;
+    text-align: center;
+}
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+.header {
+    margin-bottom: 40px;
+}
+.header h1 {
+    font-size: 36px;
+    color: #ff4d6d;
+    margin-bottom: 10px;
+}
+.header p {
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+}
+.upload-section {
+    margin-bottom: 40px;
+    padding: 30px;
+    background: rgba(255,77,109,0.1);
+    border-radius: 20px;
+    border: 2px dashed #ff4d6d;
+}
+.upload-section h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #ff4d6d;
+}
+.upload-btn {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 25px;
+    background: #ff4d6d;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+.upload-btn:hover {
+    background: #ff3355;
+}
+.upload-btn:active {
+    transform: scale(0.95);
+}
+#fileInput {
+    display: none;
+}
+.audio-list {
+    margin-top: 40px;
+}
+.audio-list h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #ff4d6d;
+}
+.audio-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 15px;
+    margin-bottom: 15px;
+    transition: background 0.3s ease;
+}
+.audio-item:hover {
+    background: rgba(255,255,255,0.15);
+}
+.audio-info {
+    flex: 1;
+    text-align: left;
+}
+.audio-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.audio-size {
+    font-size: 14px;
+    color: rgba(255,255,255,0.6);
+}
+.audio-actions {
+    display: flex;
+    gap: 10px;
+}
+.play-btn, .delete-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+.play-btn {
+    background: #4CAF50;
+    color: white;
+}
+.delete-btn {
+    background: #f44336;
+    color: white;
+}
+.play-btn:active, .delete-btn:active {
+    transform: scale(0.95);
+}
+.back-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+.back-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+.back-btn:active {
+    transform: scale(0.95);
+}
+.success-msg {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #4CAF50;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 1000;
+    display: none;
+    animation: slideIn 0.3s ease;
+}
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
+</head>
+<body>
+<button class="back-btn" onclick="window.location.href='love.html'">← 返回</button>
+
+<div class="container">
+    <div class="header">
+        <h1>🎵 音频播放器</h1>
+        <p>上传和管理你的音频文件</p>
+    </div>
+
+    <div class="upload-section">
+        <h2>上传音频</h2>
+        <input type="file" id="fileInput" accept=".mp3">
+        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">📁 选择MP3文件</button>
+    </div>
+
+    <div class="audio-list">
+        <h2>音频列表</h2>
+        <div id="audioList"></div>
+    </div>
+</div>
+
+<div id="successMsg" class="success-msg"></div>
+
+<script>
+// 音频文件列表
+let audioFiles = [];
+
+// 初始化页面
+function init() {
+    loadAudioFiles();
+    setupEventListeners();
+}
+
+// 加载音频文件
+function loadAudioFiles() {
+    // 模拟加载现有音频文件
+    audioFiles = [
+        { name: 'sing01.mp3', size: '2.5MB' }
+    ];
+    renderAudioList();
+}
+
+// 设置事件监听器
+function setupEventListeners() {
+    // 文件上传
+    document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+}
+
+// 处理文件上传
+function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        if (file.type === 'audio/mpeg' || file.name.endsWith('.mp3')) {
+            // 这里应该是实际的文件上传逻辑
+            // 由于是本地项目，我们只做模拟
+            const newAudio = {
+                name: file.name,
+                size: formatFileSize(file.size)
+            };
+            audioFiles.push(newAudio);
+            renderAudioList();
+            showSuccessMessage('音频上传成功！');
+            
+            // 重置文件输入
+            e.target.value = '';
+        } else {
+            alert('请选择MP3格式的音频文件！');
+        }
+    }
+}
+
+// 格式化文件大小
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + 'B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
+    else return (bytes / 1048576).toFixed(1) + 'MB';
+}
+
+// 删除音频
+function deleteAudio(index) {
+    if (confirm('确定要删除这个音频文件吗？')) {
+        audioFiles.splice(index, 1);
+        renderAudioList();
+        showSuccessMessage('音频删除成功！');
+    }
+}
+
+// 播放音频
+function playAudio(audioName) {
+    const audio = new Audio(`audio/${audioName}`);
+    audio.play().catch(() => {
+        alert('无法播放音频，请检查文件是否存在。');
+    });
+}
+
+// 渲染音频列表
+function renderAudioList() {
+    const audioList = document.getElementById('audioList');
+    if (audioFiles.length === 0) {
+        audioList.innerHTML = '<p style="color: rgba(255,255,255,0.6);">暂无音频文件</p>';
+        return;
+    }
+
+    audioList.innerHTML = audioFiles.map((audio, index) => `
+        <div class="audio-item">
+            <div class="audio-info">
+                <div class="audio-title">🎵 ${audio.name}</div>
+                <div class="audio-size">${audio.size}</div>
+            </div>
+            <div class="audio-actions">
+                <button class="play-btn" onclick="playAudio('${audio.name}')">▶ 播放</button>
+                <button class="delete-btn" onclick="deleteAudio(${index})">🗑️ 删除</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 显示成功消息
+function showSuccessMessage(message) {
+    const successMsg = document.getElementById('successMsg');
+    successMsg.textContent = message;
+    successMsg.style.display = 'block';
+    
+    setTimeout(() => {
+        successMsg.style.display = 'none';
+    }, 3000);
+}
+
+// 初始化
+init();
+</script>
+</body>
+</html>

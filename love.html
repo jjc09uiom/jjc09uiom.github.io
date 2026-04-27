@@ -155,7 +155,7 @@ canvas {
     <div id="text"></div>
     <!-- <img id="photo" src="img/photo.jpg"> -->
     <br>
-    <button id="videoBtn">点我看一段小视频 🎬</button>
+    <button id="audioBtn">点我进入音频播放器 🎬</button>
 </div>
 <!-- 验证窗口 -->
 <div id="verifyModal" class="modal">
@@ -188,7 +188,7 @@ function typeWriter() {
     } else {
         // 显示图片和按钮
         // document.getElementById("photo").style.display = "block";
-        document.getElementById("videoBtn").style.display = "inline-block";
+        document.getElementById("audioBtn").style.display = "inline-block";
     }
 }
 
@@ -289,9 +289,9 @@ window.addEventListener('mousemove', spawnHearts);
 window.addEventListener('touchstart', spawnHearts);
 window.addEventListener('touchmove', spawnHearts);
 
-// 播放视频
-document.getElementById("videoBtn").onclick = () => {
-    // window.location.href = "video/panda.mp4";
+// 进入音频播放器
+document.getElementById("audioBtn").onclick = () => {
+    window.location.href = "audio-player.html";
 };
 
 // 正确密码
