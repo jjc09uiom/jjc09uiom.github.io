@@ -192,11 +192,6 @@ function typeWriter() {
     }
 }
 
-// 自动播放音频（需要用户点击触发）
-document.body.addEventListener("click", () => {
-    audio.play().catch(() => {});
-}, { once: true });
-
 // 音频控制
 const audioControl = document.getElementById('audioControl');
 audioControl.addEventListener('click', () => {
