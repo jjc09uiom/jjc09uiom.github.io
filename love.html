@@ -143,13 +143,22 @@ canvas {
     font-size: 30px;
     cursor: pointer;
     z-index: 1000;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    display: none;
+}
+.audio-control.muted {
+    opacity: 1;
+}
+.audio-control:not(.muted) {
+    opacity: 0.4;
 }
 .audio-control:active {
     transform: scale(0.9);
 }
-#playBtn {
-    display: none;
+.play-btn-fixed {
+    position: fixed;
+    bottom: 30px;
+    right: 80px;
     padding: 12px 25px;
     background: #ff4d6d;
     color: white;
@@ -158,11 +167,22 @@ canvas {
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
-    margin-top: 10px;
+    z-index: 1000;
     transition: transform 0.2s ease;
+    display: none;
 }
-#playBtn:active {
+.play-btn-fixed:active {
     transform: scale(0.95);
+}
+.play-btn-fixed.playing {
+    background: #4CAF50;
+}
+@keyframes soundWave {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+.play-btn-fixed.playing {
+    animation: soundWave 0.8s ease-in-out infinite;
 }
 </style>
 </head>
@@ -172,7 +192,6 @@ canvas {
     <!-- <img id="photo" src="img/photo.jpg"> -->
     <br>
     <button id="audioBtn">点我进入音频播放器 🎬</button>
-    <button id="playBtn">🎵 播放音乐</button>
 </div>
 <!-- 验证窗口 -->
 <div id="verifyModal" class="modal">
@@ -188,7 +207,8 @@ canvas {
 <div class="container">
 </div>
 <audio id="audio" src="audio/kiss.mp3"></audio>
-<div id="audioControl" class="audio-control" style="display: none;">🔊</div>
+<div id="audioControl" class="audio-control muted">🔇</div>
+<button id="playBtn" class="play-btn-fixed">🔊 点击播放</button>
 <canvas id="heartCanvas"></canvas>
 <script>
 const message = "遇见你之后，我才知道什么是心动 ❤️";
@@ -211,12 +231,17 @@ function typeWriter() {
 
 // 音频控制 - 控制静音
 const audioControl = document.getElementById('audioControl');
-let isMuted = false;
+let isMuted = true;
 
 audioControl.addEventListener('click', () => {
     isMuted = !isMuted;
     audio.muted = isMuted;
     audioControl.textContent = isMuted ? '🔇' : '🔊';
+    if (isMuted) {
+        audioControl.classList.add('muted');
+    } else {
+        audioControl.classList.remove('muted');
+    }
 });
 
 // 播放按钮 - 从头开始播放
@@ -229,8 +254,19 @@ playBtn.addEventListener('click', () => {
         currentAudio.currentTime = 0;
     }
     currentAudio = new Audio('audio/kiss.mp3');
-    currentAudio.play().catch(() => {
-        alert('无法播放音频，请检查文件是否存在。');
+    if (!audio.muted) {
+        currentAudio.play().catch(() => {
+            alert('无法播放音频，请检查文件是否存在。');
+        });
+        playBtn.classList.add('playing');
+        playBtn.textContent = '🔊 播放中';
+    } else {
+        playBtn.textContent = '🔊 已暂停';
+    }
+    
+    currentAudio.addEventListener('ended', () => {
+        playBtn.classList.remove('playing');
+        playBtn.textContent = '🔊 点击播放';
     });
 });
 typeWriter();
@@ -332,7 +368,8 @@ document.getElementById("submitBtn").onclick = () => {
         container.style.opacity = '1';
         // 显示音频控制按钮和播放按钮
         document.getElementById('audioControl').style.display = 'block';
-        document.getElementById('playBtn').style.display = 'inline-block';
+        document.getElementById('playBtn').style.display = 'block';
+        document.getElementById('playBtn').textContent = '🔊 点击播放';
     } else {
         document.getElementById("errorMsg").style.display = "block";
     }
