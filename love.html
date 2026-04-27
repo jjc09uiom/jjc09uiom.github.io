@@ -121,6 +121,13 @@ button {
     font-size: 12px;
     color: rgba(255,255,255,0.7);
 }
+canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 999;
+}
 </style>
 </head>
 <body>
@@ -144,6 +151,7 @@ button {
 <div class="container">
 </div>
 <audio id="audio" src="audio/sing01.mp3"></audio>
+<canvas id="heartCanvas"></canvas>
 <script>
 const message = "遇见你之后，我才知道什么是心动 ❤️";
 
@@ -169,6 +177,82 @@ document.body.addEventListener("click", () => {
 }, { once: true });
 typeWriter();
 
+// ❤️ 爱心粒子效果
+const canvas = document.getElementById('heartCanvas');
+const ctx = canvas.getContext('2d');
+
+let particles = [];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+// 创建爱心
+function createHeart(x, y) {
+    particles.push({
+        x,
+        y,
+        size: Math.random() * 8 + 6,
+        alpha: 1,
+        vx: (Math.random() - 0.5) * 2,
+        vy: -Math.random() * 2 - 1
+    });
+}
+// 绘制爱心
+function drawHeart(p) {
+    ctx.save();
+    ctx.globalAlpha = p.alpha;
+    ctx.translate(p.x, p.y);
+    ctx.scale(p.size / 10, p.size / 10);
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(0, -3, -5, -3, -5, 0);
+    ctx.bezierCurveTo(-5, 3, 0, 5, 0, 7);
+    ctx.bezierCurveTo(0, 5, 5, 3, 5, 0);
+    ctx.bezierCurveTo(5, -3, 0, -3, 0, 0);
+    ctx.fillStyle = '#ff4d6d';
+    ctx.fill();
+
+    ctx.restore();
+}
+// 爱心动画
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach((p, i) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.02;
+
+        if (p.alpha <= 0) {
+            particles.splice(i, 1);
+        } else {
+            drawHeart(p);
+        }
+    });
+
+    requestAnimationFrame(animate);
+}
+animate();
+
+// 点击 + 移动触发
+function spawnHearts(e) {
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const y = e.touches ? e.touches[0].clientY : e.clientY;
+
+    for (let i = 0; i < 4; i++) {
+        createHeart(x, y);
+    }
+}
+
+window.addEventListener('click', spawnHearts);
+window.addEventListener('mousemove', spawnHearts);
+window.addEventListener('touchstart', spawnHearts);
+window.addEventListener('touchmove', spawnHearts);
+
 // 播放视频
 document.getElementById("videoBtn").onclick = () => {
     // window.location.href = "video/panda.mp4";
@@ -177,6 +261,7 @@ document.getElementById("videoBtn").onclick = () => {
 // 正确密码
 const correctPassword = "我爱你么么哒特";
 
+// 密码验证
 document.getElementById("submitBtn").onclick = () => {
     const input = document.getElementById("passwordInput").value;
     if (input === correctPassword) {
@@ -186,7 +271,7 @@ document.getElementById("submitBtn").onclick = () => {
         document.getElementById("errorMsg").style.display = "block";
     }
 };
-
+// 密码输入
 document.getElementById("passwordInput").onkeypress = (e) => {
     if (e.key === "Enter") {
         document.getElementById("submitBtn").click();
