@@ -159,23 +159,17 @@ canvas {
     position: fixed;
     bottom: 30px;
     right: 80px;
-    padding: 12px 25px;
-    background: #ff4d6d;
-    color: white;
-    border: none;
-    border-radius: 25px;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 30px;
     cursor: pointer;
     z-index: 1000;
-    transition: transform 0.2s ease;
+    transition: transform 0.2s ease, opacity 0.2s ease;
     display: none;
+    background: none;
+    border: none;
+    padding: 0;
 }
 .play-btn-fixed:active {
     transform: scale(0.95);
-}
-.play-btn-fixed.playing {
-    background: #4CAF50;
 }
 @keyframes soundWave {
     0%, 100% { transform: scale(1); }
@@ -208,7 +202,7 @@ canvas {
 </div>
 <audio id="audio" src="audio/kiss.mp3"></audio>
 <div id="audioControl" class="audio-control muted">🔇</div>
-<button id="playBtn" class="play-btn-fixed">🔊 点击播放</button>
+<button id="playBtn" class="play-btn-fixed">🔊</button>
 <canvas id="heartCanvas"></canvas>
 <script>
 const message = "遇见你之后，我才知道什么是心动 ❤️";
@@ -259,14 +253,10 @@ playBtn.addEventListener('click', () => {
             alert('无法播放音频，请检查文件是否存在。');
         });
         playBtn.classList.add('playing');
-        playBtn.textContent = '🔊 播放中';
-    } else {
-        playBtn.textContent = '🔊 已暂停';
     }
     
     currentAudio.addEventListener('ended', () => {
         playBtn.classList.remove('playing');
-        playBtn.textContent = '🔊 点击播放';
     });
 });
 typeWriter();
@@ -369,7 +359,6 @@ document.getElementById("submitBtn").onclick = () => {
         // 显示音频控制按钮和播放按钮
         document.getElementById('audioControl').style.display = 'block';
         document.getElementById('playBtn').style.display = 'block';
-        document.getElementById('playBtn').textContent = '🔊 点击播放';
     } else {
         document.getElementById("errorMsg").style.display = "block";
     }
