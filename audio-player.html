@@ -139,15 +139,78 @@ body {
 .reset-btn:active {
     transform: scale(0.9);
 }
+#audioList {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 15px;
+    height: 450px; /* 固定高度，容纳 5 条音频 + 没有更多了 */
+    overflow: hidden; /* 不支持滚动 */
+    border: 1px solid rgba(255, 77, 109, 0.2);
+    position: relative;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+.no-more {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 13px;
+    padding: 12px 0;
+    margin-top: auto; /* 始终吸附在底部 */
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+.pagination-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(255, 77, 109, 0.1);
+    border-radius: 25px;
+}
+.page-btn {
+    background: none;
+    border: none;
+    color: #ff4d6d;
+    font-size: 24px;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.page-btn:hover:not(:disabled) {
+    transform: scale(1.3);
+}
+.page-btn:active:not(:disabled) {
+    transform: scale(0.9);
+}
+.page-btn:disabled {
+    color: rgba(255, 255, 255, 0.2);
+    cursor: not-allowed;
+}
+.page-info {
+    font-size: 14px;
+    color: white;
+    font-weight: bold;
+    min-width: 80px;
+}
 .audio-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 15px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 12px;
-    margin-bottom: 12px;
-    transition: background 0.3s ease;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: background 0.2s;
+    height: 64px; /* 固定单条高度，确保 5 条高度一致 */
+    box-sizing: border-box;
+}
+.audio-item:last-of-type {
+    margin-bottom: 0;
 }
 .audio-item:hover {
     background: rgba(255,255,255,0.15);
@@ -303,6 +366,11 @@ body {
             </div>
         </div>
         <div id="audioList"></div>
+        <div class="pagination-bar">
+            <button id="prevPage" class="page-btn" title="上一页">◀</button>
+            <div id="pageInfo" class="page-info">1 / 1</div>
+            <button id="nextPage" class="page-btn" title="下一页">▶</button>
+        </div>
     </div>
 </div>
 
@@ -323,9 +391,14 @@ body {
 const WORKER_URL = 'https://audio-manager.jjc09uiom.workers.dev'; 
 
 let audioFiles = [];
-let filteredFiles = []; // 存储过滤后的列表
+let filteredFiles = []; // 当前页展示的文件
 let currentPlayer = null;
 let currentPlayingIndex = -1;
+
+// 分页状态
+let currentPage = 1;
+const pageSize = 5;
+let totalPages = 1;
 
 async function init() {
     setupEventListeners();
@@ -334,70 +407,103 @@ async function init() {
 
 async function fetchAudioList() {
     try {
-        const res = await fetch(`${WORKER_URL}/list`);
+        const searchQuery = document.getElementById('searchInput').value.trim();
+        // 构造分页和搜索请求 URL
+        const url = new URL(`${WORKER_URL}/list`);
+        url.searchParams.append('page', currentPage);
+        url.searchParams.append('limit', pageSize);
+        if (searchQuery) {
+            url.searchParams.append('search', searchQuery);
+        }
+
+        const res = await fetch(url.toString());
         if (!res.ok) throw new Error('无法获取列表');
+        
         const data = await res.json();
         
-        // 转换 R2 数据格式为页面所需的格式
-        // uploaded 字段格式：2024-01-15T08:30:00.000Z
-        audioFiles = data.map(item => {
+        // 更新分页信息
+        totalPages = data.totalPages || 1;
+        currentPage = data.currentPage || 1;
+        
+        // 转换 R2 数据格式
+        filteredFiles = data.items.map(item => {
             const uploadedDate = new Date(item.uploaded);
             const formattedDate = formatUploadTime(uploadedDate);
             return {
                 name: item.key,
                 displayName: item.key,
                 size: formatFileSize(item.size),
-                uploaded: item.uploaded, // 原始时间戳，用于排序
-                uploadedFormatted: formattedDate, // 格式化后显示 yyyy-mm-dd,h:m:s
+                uploaded: item.uploaded,
+                uploadedFormatted: formattedDate,
                 isR2: true
             };
         });
         
-        // 按上传时间正序排序（最老的在前）
-        audioFiles.sort((a, b) => new Date(a.uploaded) - new Date(b.uploaded));
-        
-        filteredFiles = [...audioFiles]; // 初始状态显示全部
         renderAudioList();
+        updatePaginationUI();
     } catch (e) {
         console.error('获取列表失败:', e);
-        // 如果失败，显示空列表或尝试从本地加载（可选）
-        audioFiles = [];
         filteredFiles = [];
         renderAudioList();
     }
 }
 
+function updatePaginationUI() {
+    document.getElementById('pageInfo').textContent = `${currentPage} / ${totalPages}`;
+    document.getElementById('prevPage').disabled = currentPage <= 1;
+    document.getElementById('nextPage').disabled = currentPage >= totalPages;
+}
+
 function setupEventListeners() {
     document.getElementById('fileInput').addEventListener('change', handleFileUpload);
     
-    // 搜索按钮点击事件
-    document.getElementById('searchBtn').addEventListener('click', handleSearch);
+    // 搜索
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        currentPage = 1; // 搜索时重置到第一页
+        fetchAudioList();
+    });
     
-    // 还原按钮点击事件
-    document.getElementById('resetBtn').addEventListener('click', handleReset);
+    // 还原
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        document.getElementById('searchInput').value = '';
+        currentPage = 1;
+        fetchAudioList();
+    });
     
-    // 回车键搜索
+    // 回车搜索
     document.getElementById('searchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSearch();
+        if (e.key === 'Enter') {
+            currentPage = 1;
+            fetchAudioList();
+        }
+    });
+
+    // 分页按钮
+    document.getElementById('prevPage').addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            fetchAudioList();
+        }
+    });
+
+    document.getElementById('nextPage').addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            fetchAudioList();
+        }
     });
 }
 
 function handleSearch() {
-    const query = document.getElementById('searchInput').value.trim().toLowerCase();
-    if (!query) {
-        filteredFiles = [...audioFiles];
-    } else {
-        filteredFiles = audioFiles.filter(file => 
-            file.displayName.toLowerCase().includes(query)
-        );
-    }
-    renderAudioList();
+    // 该函数已被 fetchAudioList 内部逻辑替代，但为了兼容旧代码暂留或重定向
+    currentPage = 1;
+    fetchAudioList();
 }
 
 function handleReset() {
     document.getElementById('searchInput').value = '';
-    filteredFiles = [...audioFiles];
-    renderAudioList();
+    currentPage = 1;
+    fetchAudioList();
 }
 
 async function handleFileUpload(e) {
@@ -541,11 +647,14 @@ function togglePlay(index) {
 function renderAudioList() {
     const audioList = document.getElementById('audioList');
     if (filteredFiles.length === 0) {
-        audioList.innerHTML = '<p style="color: rgba(255,255,255,0.6);">未找到匹配的音频文件</p>';
+        audioList.innerHTML = '<p style="color: rgba(255,255,255,0.6); text-align: center; margin-top: 50px;">未找到匹配的音频文件</p>';
         return;
     }
 
     let html = '';
+    // 计算起始序号
+    const startIndex = (currentPage - 1) * pageSize;
+
     for (let i = 0; i < filteredFiles.length; i++) {
         const audio = filteredFiles[i];
         const isPlaying = currentPlayingIndex === i && currentPlayer && !currentPlayer.paused;
@@ -555,7 +664,7 @@ function renderAudioList() {
         html += `
             <div class="audio-item">
                 <div class="audio-info">
-                    <div class="audio-title"><span style="color:#ff4d6d;font-weight:bold;">${i + 1}.</span> 🎵 ${audio.displayName}</div>
+                    <div class="audio-title"><span style="color:#ff4d6d;font-weight:bold;">${startIndex + i + 1}.</span> 🎵 ${audio.displayName}</div>
                     <div class="audio-size">${audio.size} &nbsp;|&nbsp; 上传时间：${audio.uploadedFormatted}</div>
                 </div>
                 <div class="audio-actions">
@@ -565,7 +674,15 @@ function renderAudioList() {
             </div>
         `;
     }
+
+    // 如果当前页条数不足 pageSize，或者已经是最后一页，显示“没有更多了”
+    if (filteredFiles.length < pageSize || currentPage === totalPages) {
+        html += '<div class="no-more">没有更多了</div>';
+    }
+
     audioList.innerHTML = html;
+    // 列表更新后，滚动条回到顶部
+    audioList.scrollTop = 0;
 }
 
 function showSuccessMessage(message) {
