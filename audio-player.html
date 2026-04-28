@@ -263,16 +263,12 @@ async function fetchAudioList() {
         const data = await res.json();
         
         // 转换 R2 数据格式为页面所需的格式
-        audioFiles = data.map(item => {
-            // 尝试移除时间戳前缀 (如 1777348765356_) 用于显示
-            const displayName = item.key.includes('_') ? item.key.split('_').slice(1).join('_') : item.key;
-            return {
-                name: item.key,        // 实际的 R2 Key（用于删除和播放）
-                displayName: displayName, // 漂亮的文件名（用于显示）
-                size: formatFileSize(item.size),
-                isR2: true
-            };
-        });
+        audioFiles = data.map(item => ({
+            name: item.key,        // 现在的 Key 就是原始文件名
+            displayName: item.key, 
+            size: formatFileSize(item.size),
+            isR2: true
+        }));
         
         renderAudioList();
     } catch (e) {
@@ -296,6 +292,14 @@ async function handleFileUpload(e) {
         return;
     }
 
+    // --- 本地重名检查 ---
+    const isDuplicate = audioFiles.some(f => f.name === file.name);
+    if (isDuplicate) {
+        alert(`文件 "${file.name}" 已存在于云端，请勿重复上传。`);
+        e.target.value = '';
+        return;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
 
@@ -307,16 +311,22 @@ async function handleFileUpload(e) {
             body: formData
         });
 
+        if (res.status === 409) {
+            const errorData = await res.json();
+            alert(errorData.error || '文件已存在');
+            return;
+        }
+
         if (!res.ok) throw new Error('上传失败');
         
         const result = await res.json();
         if (result.success) {
-            showSuccessMessage('音频上传成功并已同步到 R2！');
-            await fetchAudioList(); // 重新刷新列表
+            showSuccessMessage('音频上传成功！');
+            await fetchAudioList(); 
         }
     } catch (e) {
         console.error('上传出错:', e);
-        alert('上传失败，请检查 Worker 配置和网络连接');
+        alert('上传失败，请检查网络连接');
     } finally {
         e.target.value = '';
     }
