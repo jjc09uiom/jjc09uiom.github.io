@@ -263,12 +263,22 @@ async function fetchAudioList() {
         const data = await res.json();
         
         // 转换 R2 数据格式为页面所需的格式
-        audioFiles = data.map(item => ({
-            name: item.key,        // 现在的 Key 就是原始文件名
-            displayName: item.key, 
-            size: formatFileSize(item.size),
-            isR2: true
-        }));
+        // uploaded 字段格式：2024-01-15T08:30:00.000Z
+        audioFiles = data.map(item => {
+            const uploadedDate = new Date(item.uploaded);
+            const formattedDate = formatUploadTime(uploadedDate);
+            return {
+                name: item.key,
+                displayName: item.key,
+                size: formatFileSize(item.size),
+                uploaded: item.uploaded, // 原始时间戳，用于排序
+                uploadedFormatted: formattedDate, // 格式化后显示 yyyy-mm-dd,h:m:s
+                isR2: true
+            };
+        });
+        
+        // 按上传时间正序排序（最老的在前）
+        audioFiles.sort((a, b) => new Date(a.uploaded) - new Date(b.uploaded));
         
         renderAudioList();
     } catch (e) {
@@ -337,6 +347,16 @@ function formatFileSize(bytes) {
     if (bytes < 1024) return bytes + 'B';
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
     else return (bytes / 1048576).toFixed(1) + 'MB';
+}
+
+function formatUploadTime(date) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const m = String(date.getMinutes()).padStart(2, '0');
+    const s = String(date.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd},${h}:${m}:${s}`;
 }
 
 async function deleteAudio(index) {
@@ -424,8 +444,8 @@ function renderAudioList() {
         html += `
             <div class="audio-item">
                 <div class="audio-info">
-                    <div class="audio-title">🎵 ${audio.displayName}</div>
-                    <div class="audio-size">${audio.size}</div>
+                    <div class="audio-title"><span style="color:#ff4d6d;font-weight:bold;">${i + 1}.</span> 🎵 ${audio.displayName}</div>
+                    <div class="audio-size">${audio.size} &nbsp;|&nbsp; 上传时间：${audio.uploadedFormatted}</div>
                 </div>
                 <div class="audio-actions">
                     <button class="play-btn" onclick="togglePlay(${i})">${playBtnText}</button>
