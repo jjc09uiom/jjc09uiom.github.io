@@ -69,10 +69,75 @@ body {
 .audio-list {
     margin-top: 30px;
 }
-.audio-list h2 {
-    font-size: 20px;
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.list-header h2 {
+    font-size: 20px;
+    margin: 0;
     color: #ff4d6d;
+}
+.search-container {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 5px 15px;
+    gap: 8px;
+    border: 1px solid rgba(255, 77, 109, 0.3);
+}
+.search-icon {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.6);
+}
+.search-input {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 14px;
+    outline: none;
+    width: 120px;
+}
+.search-btn {
+    background: #ff4d6d;
+    color: white;
+    border: none;
+    border-radius: 15px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s ease;
+}
+.search-btn:hover {
+    background: #ff3355;
+    transform: scale(1.05);
+}
+.search-btn:active {
+    transform: scale(0.9);
+}
+.reset-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, color 0.2s;
+    padding: 0;
+}
+.reset-btn:hover {
+    color: #ff4d6d;
+    transform: scale(1.2);
+}
+.reset-btn:active {
+    transform: scale(0.9);
 }
 .audio-item {
     display: flex;
@@ -226,7 +291,17 @@ body {
     </div>
 
     <div class="audio-list">
-        <h2>音频列表</h2>
+        <div class="list-header">
+            <h2>音频列表</h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="搜索音频...">
+                    <button id="searchBtn" class="search-btn">搜索</button>
+                </div>
+                <button id="resetBtn" class="reset-btn" title="重置列表">↻</button>
+            </div>
+        </div>
         <div id="audioList"></div>
     </div>
 </div>
@@ -248,6 +323,7 @@ body {
 const WORKER_URL = 'https://audio-manager.jjc09uiom.workers.dev'; 
 
 let audioFiles = [];
+let filteredFiles = []; // 存储过滤后的列表
 let currentPlayer = null;
 let currentPlayingIndex = -1;
 
@@ -280,17 +356,48 @@ async function fetchAudioList() {
         // 按上传时间正序排序（最老的在前）
         audioFiles.sort((a, b) => new Date(a.uploaded) - new Date(b.uploaded));
         
+        filteredFiles = [...audioFiles]; // 初始状态显示全部
         renderAudioList();
     } catch (e) {
         console.error('获取列表失败:', e);
         // 如果失败，显示空列表或尝试从本地加载（可选）
         audioFiles = [];
+        filteredFiles = [];
         renderAudioList();
     }
 }
 
 function setupEventListeners() {
     document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+    
+    // 搜索按钮点击事件
+    document.getElementById('searchBtn').addEventListener('click', handleSearch);
+    
+    // 还原按钮点击事件
+    document.getElementById('resetBtn').addEventListener('click', handleReset);
+    
+    // 回车键搜索
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+    });
+}
+
+function handleSearch() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    if (!query) {
+        filteredFiles = [...audioFiles];
+    } else {
+        filteredFiles = audioFiles.filter(file => 
+            file.displayName.toLowerCase().includes(query)
+        );
+    }
+    renderAudioList();
+}
+
+function handleReset() {
+    document.getElementById('searchInput').value = '';
+    filteredFiles = [...audioFiles];
+    renderAudioList();
 }
 
 async function handleFileUpload(e) {
@@ -360,7 +467,7 @@ function formatUploadTime(date) {
 }
 
 async function deleteAudio(index) {
-    const audio = audioFiles[index];
+    const audio = filteredFiles[index];
     if (!confirm(`确定要从云端彻底删除 "${audio.name}" 吗？`)) return;
 
     try {
@@ -381,6 +488,10 @@ async function deleteAudio(index) {
             }
             showSuccessMessage('音频已从云端删除');
             await fetchAudioList();
+            // 如果正在搜索，重新过滤一次
+            if (document.getElementById('searchInput').value) {
+                handleSearch();
+            }
         }
     } catch (e) {
         console.error('删除出错:', e);
@@ -389,7 +500,7 @@ async function deleteAudio(index) {
 }
 
 function togglePlay(index) {
-    const audio = audioFiles[index];
+    const audio = filteredFiles[index];
     
     if (currentPlayer && currentPlayingIndex === index) {
         if (!currentPlayer.paused) {
@@ -429,14 +540,14 @@ function togglePlay(index) {
 
 function renderAudioList() {
     const audioList = document.getElementById('audioList');
-    if (audioFiles.length === 0) {
-        audioList.innerHTML = '<p style="color: rgba(255,255,255,0.6);">云端暂无音频文件，快去上传吧</p>';
+    if (filteredFiles.length === 0) {
+        audioList.innerHTML = '<p style="color: rgba(255,255,255,0.6);">未找到匹配的音频文件</p>';
         return;
     }
 
     let html = '';
-    for (let i = 0; i < audioFiles.length; i++) {
-        const audio = audioFiles[i];
+    for (let i = 0; i < filteredFiles.length; i++) {
+        const audio = filteredFiles[i];
         const isPlaying = currentPlayingIndex === i && currentPlayer && !currentPlayer.paused;
         const isPaused = currentPlayingIndex === i && currentPlayer && currentPlayer.paused;
         let playBtnText = isPlaying ? '⏸ 暂停' : (isPaused ? '▶ 继续' : '▶ 播放');
