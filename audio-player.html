@@ -243,83 +243,118 @@ body {
     sessionStorage.removeItem('fromLovePage');
 })();
 
+// --- R2 Worker 配置 ---
+// 请将此处替换为你部署好的 Worker 域名，例如：https://audio-manager.your-subdomain.workers.dev
+const WORKER_URL = 'https://audio-manager.jjc09uiom.workers.dev'; 
+
 let audioFiles = [];
-let blobUrls = {};
 let currentPlayer = null;
 let currentPlayingIndex = -1;
 
-function init() {
-    loadAudioFiles();
+async function init() {
     setupEventListeners();
+    await fetchAudioList();
 }
 
-function loadAudioFiles() {
-    const saved = localStorage.getItem('audioFiles');
-    if (saved) {
-        audioFiles = JSON.parse(saved);
-    } else {
-        audioFiles = [
-            { name: 'sing01.mp3', size: '2.5MB', isLocal: false }
-        ];
+async function fetchAudioList() {
+    try {
+        const res = await fetch(`${WORKER_URL}/list`);
+        if (!res.ok) throw new Error('无法获取列表');
+        const data = await res.json();
+        
+        // 转换 R2 数据格式为页面所需的格式
+        audioFiles = data.map(item => {
+            // 尝试移除时间戳前缀 (如 1777348765356_) 用于显示
+            const displayName = item.key.includes('_') ? item.key.split('_').slice(1).join('_') : item.key;
+            return {
+                name: item.key,        // 实际的 R2 Key（用于删除和播放）
+                displayName: displayName, // 漂亮的文件名（用于显示）
+                size: formatFileSize(item.size),
+                isR2: true
+            };
+        });
+        
+        renderAudioList();
+    } catch (e) {
+        console.error('获取列表失败:', e);
+        // 如果失败，显示空列表或尝试从本地加载（可选）
+        audioFiles = [];
+        renderAudioList();
     }
-    renderAudioList();
 }
 
 function setupEventListeners() {
     document.getElementById('fileInput').addEventListener('change', handleFileUpload);
 }
 
-function handleFileUpload(e) {
+async function handleFileUpload(e) {
     const file = e.target.files[0];
-    if (file) {
-        if (file.type === 'audio/mpeg' || file.name.endsWith('.mp3')) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const blobUrl = URL.createObjectURL(file);
-                blobUrls[file.name] = blobUrl;
+    if (!file) return;
 
-                const newAudio = {
-                    name: file.name,
-                    size: formatFileSize(file.size),
-                    isLocal: true
-                };
-                audioFiles.push(newAudio);
-                saveAudioFiles();
-                renderAudioList();
-                showSuccessMessage('音频上传成功！');
-            };
-            reader.readAsDataURL(file);
-            e.target.value = '';
-        } else {
-            alert('请选择MP3格式的音频文件！');
+    if (!(file.type === 'audio/mpeg' || file.name.endsWith('.mp3'))) {
+        alert('请选择MP3格式的音频文件！');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    showSuccessMessage('正在上传到云端...');
+
+    try {
+        const res = await fetch(`${WORKER_URL}/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!res.ok) throw new Error('上传失败');
+        
+        const result = await res.json();
+        if (result.success) {
+            showSuccessMessage('音频上传成功并已同步到 R2！');
+            await fetchAudioList(); // 重新刷新列表
         }
+    } catch (e) {
+        console.error('上传出错:', e);
+        alert('上传失败，请检查 Worker 配置和网络连接');
+    } finally {
+        e.target.value = '';
     }
 }
 
 function formatFileSize(bytes) {
+    if (!bytes) return '未知大小';
     if (bytes < 1024) return bytes + 'B';
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + 'KB';
     else return (bytes / 1048576).toFixed(1) + 'MB';
 }
 
-function deleteAudio(index) {
-    if (confirm('确定要删除这个音频文件吗？')) {
-        if (index === currentPlayingIndex) {
-            if (currentPlayer) {
+async function deleteAudio(index) {
+    const audio = audioFiles[index];
+    if (!confirm(`确定要从云端彻底删除 "${audio.name}" 吗？`)) return;
+
+    try {
+        const res = await fetch(`${WORKER_URL}/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: audio.name })
+        });
+
+        if (!res.ok) throw new Error('删除失败');
+
+        const result = await res.json();
+        if (result.success) {
+            if (index === currentPlayingIndex && currentPlayer) {
                 currentPlayer.pause();
                 currentPlayer = null;
                 currentPlayingIndex = -1;
             }
+            showSuccessMessage('音频已从云端删除');
+            await fetchAudioList();
         }
-        const audio = audioFiles[index];
-        if (audio.isLocal && blobUrls[audio.name]) {
-            URL.revokeObjectURL(blobUrls[audio.name]);
-            delete blobUrls[audio.name];
-        }
-        audioFiles.splice(index, 1);
-        saveAudioFiles();
-        renderAudioList();
-        showSuccessMessage('音频删除成功！');
+    } catch (e) {
+        console.error('删除出错:', e);
+        alert('删除失败');
     }
 }
 
@@ -340,14 +375,13 @@ function togglePlay(index) {
         currentPlayer.pause();
     }
     
-    if (audio.isLocal && blobUrls[audio.name]) {
-        currentPlayer = new Audio(blobUrls[audio.name]);
-    } else {
-        currentPlayer = new Audio(`audio/${audio.name}`);
-    }
+    // 使用 Worker 的 /url 接口获取播放地址
+    const audioUrl = `${WORKER_URL}/url?key=${encodeURIComponent(audio.name)}`;
+    currentPlayer = new Audio(audioUrl);
     
-    currentPlayer.play().catch(() => {
-        alert('无法播放音频，请检查文件是否存在。');
+    currentPlayer.play().catch((err) => {
+        console.error('播放失败:', err);
+        alert('无法播放音频，可能是文件链接失效或 Worker 权限问题。');
         currentPlayer = null;
         currentPlayingIndex = -1;
         renderAudioList();
@@ -363,15 +397,10 @@ function togglePlay(index) {
     renderAudioList();
 }
 
-function saveAudioFiles() {
-    const toSave = audioFiles.filter(a => a.isLocal);
-    localStorage.setItem('audioFiles', JSON.stringify(toSave));
-}
-
 function renderAudioList() {
     const audioList = document.getElementById('audioList');
     if (audioFiles.length === 0) {
-        audioList.innerHTML = '<p style="color: rgba(255,255,255,0.6);">暂无音频文件</p>';
+        audioList.innerHTML = '<p style="color: rgba(255,255,255,0.6);">云端暂无音频文件，快去上传吧</p>';
         return;
     }
 
@@ -380,53 +409,22 @@ function renderAudioList() {
         const audio = audioFiles[i];
         const isPlaying = currentPlayingIndex === i && currentPlayer && !currentPlayer.paused;
         const isPaused = currentPlayingIndex === i && currentPlayer && currentPlayer.paused;
-        let playBtnText = '▶ 播放';
-        
-        if (isPlaying) {
-            playBtnText = '⏸ 暂停';
-        } else if (isPaused) {
-            playBtnText = '▶ 继续';
-        }
+        let playBtnText = isPlaying ? '⏸ 暂停' : (isPaused ? '▶ 继续' : '▶ 播放');
         
         html += `
             <div class="audio-item">
                 <div class="audio-info">
-                    <div class="audio-title">🎵 ${audio.name} ${audio.isLocal ? '(本地)' : ''}</div>
+                    <div class="audio-title">🎵 ${audio.displayName}</div>
                     <div class="audio-size">${audio.size}</div>
                 </div>
                 <div class="audio-actions">
-                    <button class="play-btn" onclick="togglePlay(${i})"></button>
-                    ${audio.isLocal ? `<button class="delete-btn" onclick="deleteAudio(${i})"></button>` : `<button class="delete-btn" disabled></button>`}
+                    <button class="play-btn" onclick="togglePlay(${i})">${playBtnText}</button>
+                    <button class="delete-btn" onclick="deleteAudio(${i})">🗑️ 删除</button>
                 </div>
             </div>
         `;
     }
     audioList.innerHTML = html;
-    
-    // 更新按钮文本
-    const playButtons = document.querySelectorAll('.play-btn');
-    playButtons.forEach((btn, index) => {
-        const audio = audioFiles[index];
-        const isPlaying = currentPlayingIndex === index && currentPlayer && !currentPlayer.paused;
-        const isPaused = currentPlayingIndex === index && currentPlayer && currentPlayer.paused;
-        let playBtnText = '▶ 播放';
-        
-        if (isPlaying) {
-            playBtnText = '⏸ 暂停';
-        } else if (isPaused) {
-            playBtnText = '▶ 继续';
-        }
-        btn.textContent = playBtnText;
-    });
-    
-    const deleteButtons = document.querySelectorAll('.delete-btn');
-    deleteButtons.forEach((btn, index) => {
-        if (audioFiles[index].isLocal) {
-            btn.textContent = '🗑️ 删除';
-        } else {
-            btn.textContent = '🗑️ 删除';
-        }
-    });
 }
 
 function showSuccessMessage(message) {
