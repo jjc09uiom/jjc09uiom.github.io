@@ -408,7 +408,6 @@ async function init() {
 async function fetchAudioList() {
     try {
         const searchQuery = document.getElementById('searchInput').value.trim();
-        // 构造分页和搜索请求 URL
         const url = new URL(`${WORKER_URL}/list`);
         url.searchParams.append('page', currentPage);
         url.searchParams.append('limit', pageSize);
@@ -416,9 +415,22 @@ async function fetchAudioList() {
             url.searchParams.append('search', searchQuery);
         }
 
-        const res = await fetch(url.toString());
-        if (!res.ok) throw new Error('无法获取列表');
-        
+        // 添加超时和重试机制，应对手机自带浏览器的网络抖动
+        const fetchWithRetry = async (targetUrl, retries = 2) => {
+            try {
+                const response = await fetch(targetUrl, { mode: 'cors' });
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response;
+            } catch (err) {
+                if (retries > 0) {
+                    console.log(`正在重试... 剩余次数: ${retries}`);
+                    return fetchWithRetry(targetUrl, retries - 1);
+                }
+                throw err;
+            }
+        };
+
+        const res = await fetchWithRetry(url.toString());
         const data = await res.json();
         
         // 更新分页信息
